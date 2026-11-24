@@ -1,122 +1,124 @@
-from game_logic_2_0 import Game_logic
 from kivy.app import App
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.anchorlayout import AnchorLayout
-from kivy.graphics import Color, Line
+from kivy.core.window import Window
+from game_logic_2_0 import Game_logic
 
 
-class Main_app(App):
-
+class MainApp(App):
     def build(self):
-        self.anch = AnchorLayout(anchor_x = 'center',anchor_y = 'center')
-        self.Bot_ferst = True
-        self.bot_count,self.you_count = 0,0
-        self.bot_cunter , self.you_counter= Label(size_hint = (0.3,0.2),text = f'Бот\n {self.bot_count}',pos_hint={"center_x": 0.8, "y": 0.8},font_size=40),Label(size_hint = (0.3,0.2),text = f'Ты\n {self.you_count}',pos_hint={"center_x": 0.2, "y": 0.8},font_size=40)
-        self.root = FloatLayout()
+        self.title = "XvsO"
+        Window.clearcolor = (0.035, 0.07, 0.14, 1)
+        self.bot_starts = True
+        self.bot_score = 0
+        self.you_score = 0
         self.gameplay = True
-        self.game = Game_logic('ww_beast.pkl')
-        self.button_pole = {}
-        self.creat_pole()
-        self.root.add_widget(Button(size_hint = (0.3,0.1),text = '[color=ff3333]Reset[/color]',on_press = self.reset,pos_hint={"center_x": 0.5, "y": 0},font_size=40,markup = True))
-        self.root.add_widget(Button(size_hint = (0.3,0.1),text = 'Бот',on_press = self.switch_Bot,pos_hint={"center_x": 0.5, "y": 0.75},font_size=40))
-        self.root.add_widget(self.bot_cunter)
-        self.root.add_widget(self.you_counter)
-        self.line = Line(points=[0, 0, 100, 0], width=1.5)
-        self.anch   
-        self.Bot()
-        self.root.add_widget(self.anch)
-        return self.root
+        self.game = Game_logic("ww_beast.pkl")
+        self.buttons = {}
 
-    
+        root = FloatLayout()
+        self.bot_label = Label(text="Бот\n0", size_hint=(.3,.12),
+                               pos_hint={"center_x":.78,"top":.98}, font_size="20sp")
+        self.you_label = Label(text="Ты\n0", size_hint=(.3,.12),
+                               pos_hint={"center_x":.22,"top":.98}, font_size="20sp")
+        self.status = Label(text="XvsO", size_hint=(.8,.08),
+                            pos_hint={"center_x":.5,"top":.85}, font_size="20sp")
+        root.add_widget(self.bot_label)
+        root.add_widget(self.you_label)
+        root.add_widget(self.status)
 
+        board = GridLayout(rows=3, cols=3, spacing=5, padding=5,
+                           size_hint=(.88,.52), pos_hint={"center_x":.5,"center_y":.49})
+        for row in range(1,4):
+            for col in range(1,4):
+                btn = Button(text="", font_size="48sp",
+                             background_normal="", background_color=(.10,.20,.34,1),
+                             color=(.35,.95,.95,1))
+                btn.row, btn.col = row, col
+                btn.bind(on_press=self.press_player)
+                self.buttons[(row,col)] = btn
+                board.add_widget(btn)
+        root.add_widget(board)
 
-    def switch_Bot(self,btn):
-        self.Bot_ferst = not self.Bot_ferst
-        if self.Bot_ferst:
-            btn.text = "Бот"
-        else:
-            btn.text = "Ты"
-        self.reset(btn)
+        reset_btn = Button(text="Новая игра", size_hint=(.42,.09),
+                           pos_hint={"center_x":.28,"y":.06},
+                           background_normal="", background_color=(.08,.55,.68,1))
+        reset_btn.bind(on_press=self.reset)
+        mode_btn = Button(text="Первым: Бот", size_hint=(.42,.09),
+                          pos_hint={"center_x":.72,"y":.06},
+                          background_normal="", background_color=(.30,.25,.58,1))
+        mode_btn.bind(on_press=self.switch_first)
+        root.add_widget(reset_btn)
+        root.add_widget(mode_btn)
+        self.mode_button = mode_btn
+        self.reset(None)
+        return root
 
-    def Bot(self):
-        if self.Bot_ferst:
-            self.ai_press()
+    def switch_first(self, *_):
+        self.bot_starts = not self.bot_starts
+        self.mode_button.text = "Первым: Бот" if self.bot_starts else "Первым: Ты"
+        self.reset()
 
-    def creat_pole(self):
-        
-        a = GridLayout(rows = 3,cols = 3,size_hint = (0.8,0.45))
-        for i in range(1,10):
-            row,col = ((i-1)//3)+1, ((i-1)%3)+1
-            btn = Button(on_press = self.press_player,font_size=50)
-            btn.row,btn.col = row,col
-            self.button_pole[(row,col)] = btn
-            a.add_widget(btn)
-        self.anch.add_widget(a)
-
-    def reset(self,inc):
+    def reset(self, *_):
         self.gameplay = True
         self.game.reset()
-        self.line.points=[-1, -1, -1, -1]
-        for btn in self.button_pole.values():
+        for btn in self.buttons.values():
             btn.text = ""
-        
-        self.Bot()
+            btn.disabled = False
+            btn.color = (0.35,0.95,0.95,1)
+        self.status.text = "Твой ход" if not self.bot_starts else "Ход бота"
+        if self.bot_starts:
+            self.ai_press()
 
-
-    def prin(self,instance):
-        print('сторчка: ',instance.row,' столбец: ',instance.col)
-
-    def detct_end_game(self):
-
-        b1,b2,b3= self.game.detect_win()
-        print(b1,b2,b3)
-
-        if b1!= 0:
-
-            self.line_draw(b1,b2,b3)
+    def finish_if_needed(self):
+        winning_line = self.game.detect_win()
+        if winning_line[0] != 0:
+            winner = self.game.board[winning_line[0][0]][winning_line[0][1]]
             self.gameplay = False
-            if self.button_pole[b1[0],b1[1]].text == 'X':
-                self.bot_count += 1
-                self.bot_cunter.text = f'Бот \n{str(self.bot_count)} '
-            elif self.button_pole[b1[0],b1[1]].text == 'O' :
-                self.you_count +=1
-                self.you_counter.text = f'Ты \n {str(self.you_count)}'
+            if winner == 1:
+                self.bot_score += 1
+                self.bot_label.text = f"Бот\n{self.bot_score}"
+                self.status.text = "Победил бот"
+            else:
+                self.you_score += 1
+                self.you_label.text = f"Ты\n{self.you_score}"
+                self.status.text = "Ты победил!"
+            self._lock_board()
+            return True
+        if not self.game.svoboda():
+            self.gameplay = False
+            self.status.text = "Ничья!"
+            self._lock_board()
+            return True
+        return False
 
+    def _lock_board(self):
+        for btn in self.buttons.values():
+            btn.disabled = True
 
-    def line_draw(self,b1,b2,b3):
-
-        x1,y1 =self.button_pole[b1].to_window(self.button_pole[b1].center_x,self.button_pole[b1].center_y)
-        x2,y2 =self.button_pole[b2].to_window(self.button_pole[b2].center_x,self.button_pole[b2].center_y)
-        x3,y3 =self.button_pole[b3].to_window(self.button_pole[b3].center_x,self.button_pole[b3].center_y)
-
-        with self.root.canvas:
-            Color(1, 0, 0, 1)
-            self.line = Line(points=[x2, y2, x3, y3], width=3)
-            
-
-
-    def press_player(self,instance):
-        if not self.gameplay:
-            print('end game')
+    def press_player(self, instance):
+        if not self.gameplay or not self.game.move(instance.row, instance.col, -1):
             return
-        if not self.game.move(row=instance.row,col=instance.col,pl=-1) :
-            return
-        instance.text = 'O'
-        instance.color = "green"
-        self.detct_end_game()
-        self.ai_press()
+        instance.text = "O"
+        instance.color = (0.20,0.95,0.85,1)
+        if not self.finish_if_needed():
+            self.ai_press()
 
     def ai_press(self):
         if not self.gameplay:
-            print('end game')
             return
-        a = self.game.ai_hod(pl=1)
-        self.game.move(row=a[0],col=a[1],pl=1)
-        self.button_pole[(a[0],a[1])].text = 'X'
-        self.button_pole[(a[0],a[1])].color = "red"
-        self.detct_end_game()
+        move = self.game.ai_hod(pl=1, eps=0)
+        if move is None:
+            self.finish_if_needed()
+            return
+        if self.game.move(move[0], move[1], 1):
+            btn = self.buttons[move]
+            btn.text = "X"
+            btn.color = (1,.48,.30,1)
+        self.finish_if_needed()
 
-Main_app().run()
+
+if __name__ == "__main__":
+    MainApp().run()
